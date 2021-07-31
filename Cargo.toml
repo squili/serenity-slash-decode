@@ -1,0 +1,18 @@
+[package]
+name = "serenity-slash-decode"
+description = "Abstraction layer to help with handling slash commands in Serenity"
+version = "0.1.0"
+authors = ["squili <squili@tutanota.com>"]
+edition = "2018"
+license = "ISC"
+include = [
+    "**/*.rs",
+    "Cargo.toml",
+]
+
+[dependencies]
+serenity = { version = "0.10", default-features=false, features=["unstable_discord_api"] }
+
+[dev-dependencies]
+serenity = { version = "0.10.8", default-features=false, features=["unstable_discord_api", "client", "gateway", "rustls_backend", "builder", "model"] }
+tokio = { version = "1.9.0", features=["rt-multi-thread"] }

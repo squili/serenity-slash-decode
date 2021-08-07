@@ -1,7 +1,7 @@
 [package]
 name = "serenity-slash-decode"
 description = "Abstraction layer to help with handling slash commands in Serenity"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["squili <squili@tutanota.com>"]
 edition = "2018"
 license = "ISC"

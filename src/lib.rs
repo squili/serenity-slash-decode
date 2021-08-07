@@ -29,6 +29,43 @@ pub struct SlashValue {
     name: String,
 }
 
+/// Optionally contains a `PartialMember` so you don't need to do a cache lookup
+pub enum UserOrMember {
+    User(User),
+    Member(User, PartialMember),
+}
+
+impl UserOrMember {
+    fn from_pair(user: User, member: Option<PartialMember>) -> Self {
+        match member {
+            Some(m) => Self::Member(user, m),
+            None => Self::User(user),
+        }
+    }
+
+    /// Gets the inner user
+    pub fn get_user(&self) -> &User {
+        match self {
+            UserOrMember::User(s) => s,
+            UserOrMember::Member(u, _) => u,
+        }
+    }
+
+    /// Gets the inner member, if it exists
+    pub fn get_member(&self) -> Option<&PartialMember> {
+        match self {
+            UserOrMember::User(_) => None,
+            UserOrMember::Member(_, m) => Some(m),
+        }
+    }
+}
+
+/// Mentionables
+pub enum Mentionable {
+    UserOrMember(UserOrMember),
+    Role(Role),
+}
+
 impl SlashValue {
     fn get_type_name(&self) -> String {
         match self.inner.as_ref().unwrap() {
@@ -88,10 +125,12 @@ impl SlashValue {
         }
     }
 
-    /// Returns the inner value if it is a tuple of `User` and `PartialMember`
-    pub fn get_user(&self) -> Result<(User, Option<PartialMember>)> {
+    /// Returns the inner value if it is a `UserOrMember`
+    pub fn get_user(&self) -> Result<UserOrMember> {
         match self.expect_some()? {
-            ApplicationCommandInteractionDataOptionValue::User(u, m) => Ok((u, m)),
+            ApplicationCommandInteractionDataOptionValue::User(u, m) => {
+                Ok(UserOrMember::from_pair(u, m))
+            }
             _ => Err(Error::WrongType {
                 expected: "User".to_string(),
                 found: self.get_type_name(),
@@ -118,6 +157,21 @@ impl SlashValue {
             ApplicationCommandInteractionDataOptionValue::Role(s) => Ok(s),
             _ => Err(Error::WrongType {
                 expected: "Role".to_string(),
+                found: self.get_type_name(),
+                name: self.name.clone(),
+            }),
+        }
+    }
+
+    /// Returns the inner value if it is a `Mentionable`
+    pub fn get_mentionable(&self) -> Result<Mentionable> {
+        match self.expect_some()? {
+            ApplicationCommandInteractionDataOptionValue::User(u, m) => {
+                Ok(Mentionable::UserOrMember(UserOrMember::from_pair(u, m)))
+            }
+            ApplicationCommandInteractionDataOptionValue::Role(r) => Ok(Mentionable::Role(r)),
+            _ => Err(Error::WrongType {
+                expected: "Mentionable".to_string(),
                 found: self.get_type_name(),
                 name: self.name.clone(),
             }),
@@ -164,7 +218,7 @@ impl SlashMap {
     }
 
     /// If `SlashMap` has value, call `SlashValue::get_user()` on it
-    pub fn get_user(&self, name: &str) -> Result<(User, Option<PartialMember>)> {
+    pub fn get_user(&self, name: &str) -> Result<UserOrMember> {
         match self.0.get(name) {
             Some(s) => s.get_user(),
             None => Err(Error::MissingValue {
@@ -192,6 +246,23 @@ impl SlashMap {
             }),
         }
     }
+
+    /// If `SlashMap` has value, call `SlashValue::get_mentionable()` on it
+    pub fn get_mentionable(&self, name: &str) -> Result<Mentionable> {
+        match self.0.get(name) {
+            Some(s) => s.get_mentionable(),
+            None => Err(Error::MissingValue {
+                name: name.to_string(),
+            }),
+        }
+    }
+}
+
+/// For derive macros
+pub trait FromSlashMap {
+    fn from_slash_map(_: SlashMap) -> Result<Self>
+    where
+        Self: Sized;
 }
 
 /// Processes a `ApplicationCommandInteractionData` and returns the path and arguments

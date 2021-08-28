@@ -27,7 +27,8 @@
 // Additionally, set the DISCORD_TOKEN and DISCORD_ID environment variables
 
 use serenity::client::{Context, EventHandler};
-use serenity::model::interactions::{Interaction, InteractionData, InteractionResponseType};
+use serenity::model::interactions::application_command::ApplicationCommandInteraction;
+use serenity::model::interactions::{Interaction, InteractionResponseType};
 use serenity::{async_trait, Client};
 use serenity_slash_decode::Error as SlashError;
 use serenity_slash_decode::{process, SlashMap};
@@ -59,7 +60,7 @@ type CustomResult<T> = Result<T, CustomError>;
 
 async fn handle_command(
     ctx: &Context,
-    interaction: &Interaction,
+    interaction: &ApplicationCommandInteraction,
     args: SlashMap,
 ) -> CustomResult<()> {
     let mut message = format!(
@@ -86,21 +87,20 @@ struct Handler;
 #[async_trait]
 impl EventHandler for Handler {
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
-        let data = match interaction.data.as_ref().unwrap() {
-            // only handle slash commands
-            InteractionData::ApplicationCommand(s) => s,
-            InteractionData::MessageComponent(_) => {
-                return;
-            }
+        // only handle slash commands
+        let data = match &interaction {
+            Interaction::ApplicationCommand(s) => &s.data,
+            _ => return,
         };
         let (path, args) = process(&data);
+        let command = interaction.application_command().unwrap();
         match match path.as_str() {
-            "foo" => handle_command(&ctx, &interaction, args).await,
+            "foo" => handle_command(&ctx, &command, args).await,
             _ => Err(CustomError::CommandNotFound(path)),
         } {
             Ok(_) => {}
             Err(e) => {
-                interaction
+                command
                     .create_interaction_response(ctx.http, |response| {
                         response
                             .kind(InteractionResponseType::ChannelMessageWithSource)

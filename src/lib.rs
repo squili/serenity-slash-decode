@@ -13,10 +13,11 @@ mod errors;
 pub use crate::errors::{Error, Result};
 use serenity::model::channel::PartialChannel;
 use serenity::model::guild::{PartialMember, Role};
-use serenity::model::interactions::{
+use serenity::model::interactions::application_command::{
     ApplicationCommandInteractionData, ApplicationCommandInteractionDataOptionValue,
     ApplicationCommandOptionType,
 };
+use serenity::model::misc::{Mention, Mentionable as SerenityMentionable};
 use serenity::model::user::User;
 use std::collections::HashMap;
 
@@ -64,6 +65,15 @@ impl UserOrMember {
 pub enum Mentionable {
     UserOrMember(UserOrMember),
     Role(Role),
+}
+
+impl SerenityMentionable for Mentionable {
+    fn mention(&self) -> Mention {
+        match self {
+            Mentionable::UserOrMember(u) => u.get_user().mention(),
+            Mentionable::Role(r) => r.mention(),
+        }
+    }
 }
 
 impl SlashValue {
@@ -276,7 +286,11 @@ pub fn process(interaction: &ApplicationCommandInteractionData) -> (String, Slas
         match options.get(0) {
             None => break,
             Some(option) => {
-                if option.kind == ApplicationCommandOptionType::SubCommand {
+                if matches!(
+                    option.kind,
+                    ApplicationCommandOptionType::SubCommand
+                        | ApplicationCommandOptionType::SubCommandGroup
+                ) {
                     path.push(option.name.clone());
                     options = &option.options;
                 } else {

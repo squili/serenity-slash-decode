@@ -78,7 +78,8 @@ async fn handle_command(
                 .kind(InteractionResponseType::ChannelMessageWithSource)
                 .interaction_response_data(|data| data.content(message))
         })
-        .await;
+        .await
+        .unwrap();
     Ok(())
 }
 
@@ -106,7 +107,8 @@ impl EventHandler for Handler {
                             .kind(InteractionResponseType::ChannelMessageWithSource)
                             .interaction_response_data(|data| data.content(format!("Error: {}", e)))
                     })
-                    .await;
+                    .await
+                    .unwrap();
             }
         };
     }

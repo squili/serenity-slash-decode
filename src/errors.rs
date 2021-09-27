@@ -1,18 +1,18 @@
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug)]
-pub enum Error {
+pub enum Error<'a> {
     WrongType {
         expected: String,
         found: String,
-        name: String,
+        name: &'a str,
     },
     MissingValue {
-        name: String,
+        name: &'a str,
     },
 }
 
-impl Display for Error {
+impl Display for Error<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Error::WrongType {
@@ -30,6 +30,6 @@ impl Display for Error {
     }
 }
 
-impl std::error::Error for Error {}
+impl std::error::Error for Error<'_> {}
 
-pub type Result<T> = std::result::Result<T, Error>;
+pub type Result<'a, T> = std::result::Result<T, Error<'a>>;

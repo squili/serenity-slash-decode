@@ -91,22 +91,20 @@ impl SlashValue {
 
     /// Returns the inner value if it is `Some`
     pub fn expect_some(&self) -> Result<ApplicationCommandInteractionDataOptionValue> {
-        match self.inner.clone() {
-            Some(s) => Ok(s),
-            None => Err(Error::MissingValue {
-                name: self.name.clone(),
-            }),
+        match &self.inner {
+            Some(s) => Ok(s.to_owned()),
+            None => Err(Error::MissingValue { name: &self.name }),
         }
     }
 
     /// Returns the inner value if it is a `String`
-    pub fn get_string(&self) -> Result<String> {
+    pub fn get_string(&self) -> Result<'_, String> {
         match self.expect_some()? {
             ApplicationCommandInteractionDataOptionValue::String(s) => Ok(s),
             _ => Err(Error::WrongType {
                 expected: "String".to_string(),
                 found: self.get_type_name(),
-                name: self.name.clone(),
+                name: &self.name,
             }),
         }
     }
@@ -118,7 +116,7 @@ impl SlashValue {
             _ => Err(Error::WrongType {
                 expected: "Integer".to_string(),
                 found: self.get_type_name(),
-                name: self.name.clone(),
+                name: &self.name,
             }),
         }
     }
@@ -130,7 +128,7 @@ impl SlashValue {
             _ => Err(Error::WrongType {
                 expected: "Boolean".to_string(),
                 found: self.get_type_name(),
-                name: self.name.clone(),
+                name: &self.name,
             }),
         }
     }
@@ -144,7 +142,7 @@ impl SlashValue {
             _ => Err(Error::WrongType {
                 expected: "User".to_string(),
                 found: self.get_type_name(),
-                name: self.name.clone(),
+                name: &self.name,
             }),
         }
     }
@@ -156,7 +154,7 @@ impl SlashValue {
             _ => Err(Error::WrongType {
                 expected: "Channel".to_string(),
                 found: self.get_type_name(),
-                name: self.name.clone(),
+                name: &self.name,
             }),
         }
     }
@@ -168,7 +166,7 @@ impl SlashValue {
             _ => Err(Error::WrongType {
                 expected: "Role".to_string(),
                 found: self.get_type_name(),
-                name: self.name.clone(),
+                name: &self.name,
             }),
         }
     }
@@ -183,7 +181,7 @@ impl SlashValue {
             _ => Err(Error::WrongType {
                 expected: "Mentionable".to_string(),
                 found: self.get_type_name(),
-                name: self.name.clone(),
+                name: &self.name,
             }),
         }
     }
@@ -198,79 +196,65 @@ impl SlashMap {
     }
 
     /// If `SlashMap` has value, call `SlashValue::get_string()` on it
-    pub fn get_string(&self, name: &str) -> Result<String> {
+    pub fn get_string<'a>(&'a self, name: &'a str) -> Result<'a, String> {
         match self.0.get(name) {
             Some(s) => s.get_string(),
-            None => Err(Error::MissingValue {
-                name: name.to_string(),
-            }),
+            None => Err(Error::MissingValue { name }),
         }
     }
 
     /// If `SlashMap` has value, call `SlashValue::get_integer()` on it
-    pub fn get_integer(&self, name: &str) -> Result<i64> {
+    pub fn get_integer<'a>(&'a self, name: &'a str) -> Result<'a, i64> {
         match self.0.get(name) {
             Some(s) => s.get_integer(),
-            None => Err(Error::MissingValue {
-                name: name.to_string(),
-            }),
+            None => Err(Error::MissingValue { name }),
         }
     }
 
     /// If `SlashMap` has value, call `SlashValue::get_boolean()` on it
-    pub fn get_boolean(&self, name: &str) -> Result<bool> {
+    pub fn get_boolean<'a>(&'a self, name: &'a str) -> Result<'a, bool> {
         match self.0.get(name) {
             Some(s) => s.get_boolean(),
-            None => Err(Error::MissingValue {
-                name: name.to_string(),
-            }),
+            None => Err(Error::MissingValue { name }),
         }
     }
 
     /// If `SlashMap` has value, call `SlashValue::get_user()` on it
-    pub fn get_user(&self, name: &str) -> Result<UserOrMember> {
+    pub fn get_user<'a>(&'a self, name: &'a str) -> Result<'a, UserOrMember> {
         match self.0.get(name) {
             Some(s) => s.get_user(),
-            None => Err(Error::MissingValue {
-                name: name.to_string(),
-            }),
+            None => Err(Error::MissingValue { name }),
         }
     }
 
     /// If `SlashMap` has value, call `SlashValue::get_channel()` on it
-    pub fn get_channel(&self, name: &str) -> Result<PartialChannel> {
+    pub fn get_channel<'a>(&'a self, name: &'a str) -> Result<'a, PartialChannel> {
         match self.0.get(name) {
             Some(s) => s.get_channel(),
-            None => Err(Error::MissingValue {
-                name: name.to_string(),
-            }),
+            None => Err(Error::MissingValue { name }),
         }
     }
 
     /// If `SlashMap` has value, call `SlashValue::get_role()` on it
-    pub fn get_role(&self, name: &str) -> Result<Role> {
+    pub fn get_role<'a>(&'a self, name: &'a str) -> Result<'a, Role> {
         match self.0.get(name) {
             Some(s) => s.get_role(),
-            None => Err(Error::MissingValue {
-                name: name.to_string(),
-            }),
+            None => Err(Error::MissingValue { name }),
         }
     }
 
     /// If `SlashMap` has value, call `SlashValue::get_mentionable()` on it
-    pub fn get_mentionable(&self, name: &str) -> Result<Mentionable> {
+    pub fn get_mentionable<'a>(&'a self, name: &'a str) -> Result<'a, Mentionable> {
         match self.0.get(name) {
             Some(s) => s.get_mentionable(),
-            None => Err(Error::MissingValue {
-                name: name.to_string(),
-            }),
+            None => Err(Error::MissingValue { name }),
         }
     }
 }
 
 /// For derive macros
 pub trait FromSlashMap {
-    fn from_slash_map(_: SlashMap) -> Result<Self>
+    fn from_slash_map<'a>(_: SlashMap) -> Result<'a, Self>
     where
         Self: Sized;
 }
@@ -279,8 +263,7 @@ pub trait FromSlashMap {
 pub fn process(interaction: &ApplicationCommandInteractionData) -> (String, SlashMap) {
     // traverse
     let mut options = &interaction.options;
-    let mut path = Vec::new();
-    path.push(interaction.name.clone());
+    let mut path = vec![interaction.name.clone()];
 
     loop {
         match options.get(0) {

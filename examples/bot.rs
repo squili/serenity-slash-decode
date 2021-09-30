@@ -35,12 +35,12 @@ use serenity_slash_decode::{process, SlashMap};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
-enum CustomError {
-    SlashError(SlashError),
+enum CustomError<'a> {
+    SlashError(SlashError<'a>),
     CommandNotFound(String),
 }
 
-impl Display for CustomError {
+impl Display for CustomError<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             // serenity-slash-decode's error type implements Display
@@ -50,27 +50,27 @@ impl Display for CustomError {
     }
 }
 
-impl From<SlashError> for CustomError {
-    fn from(e: SlashError) -> Self {
+impl<'a> From<SlashError<'a>> for CustomError<'a> {
+    fn from(e: SlashError<'a>) -> Self {
         CustomError::SlashError(e)
     }
 }
 
-type CustomResult<T> = Result<T, CustomError>;
+type CustomResult<'a, T> = Result<T, CustomError<'a>>;
 
-async fn handle_command(
-    ctx: &Context,
-    interaction: &ApplicationCommandInteraction,
-    args: SlashMap,
-) -> CustomResult<()> {
+async fn handle_command<'a>(
+    ctx: &'a Context,
+    interaction: &'a ApplicationCommandInteraction,
+    args: &'a SlashMap,
+) -> CustomResult<'a, ()> {
+    let text = args.get_string("text")?;
     let mut message = format!(
         "text: {}\nchannel: {}",
-        args.get_string("text")?,
+        text,
         args.get_channel("channel")?.name
     );
-    match args.get_integer("integer") {
-        Ok(s) => message.push_str(&*format!("\ninteger: {}", s)),
-        Err(_) => {}
+    if let Ok(s) = args.get_integer("integer") {
+        message.push_str(&*format!("\ninteger: {}", s));
     };
     interaction
         .create_interaction_response(ctx.http.clone(), |response| {
@@ -93,16 +93,16 @@ impl EventHandler for Handler {
             Interaction::ApplicationCommand(s) => &s.data,
             _ => return,
         };
-        let (path, args) = process(&data);
+        let (path, args) = process(data);
         let command = interaction.application_command().unwrap();
         match match path.as_str() {
-            "foo" => handle_command(&ctx, &command, args).await,
+            "foo" => handle_command(&ctx, &command, &args).await,
             _ => Err(CustomError::CommandNotFound(path)),
         } {
             Ok(_) => {}
             Err(e) => {
                 command
-                    .create_interaction_response(ctx.http, |response| {
+                    .create_interaction_response(&ctx.http, |response| {
                         response
                             .kind(InteractionResponseType::ChannelMessageWithSource)
                             .interaction_response_data(|data| data.content(format!("Error: {}", e)))
